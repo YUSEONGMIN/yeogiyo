@@ -209,8 +209,6 @@ with tab1:
     selected_date = st.date_input("When is your date", value="today")
     selected_time = st.time_input("Select your time", value="now", step=3600).hour
     st.write("Your appointment is: ", selected_date, selected_time)
-
-    print("st.session_state.select_area", st.session_state)
     
     # 5.3. 화면 default값 api 호출 설정/출력
     # 1) 화면 default값 api 호출, 메시지 & 바그래프 출력
@@ -256,7 +254,7 @@ with tab1:
         if 'page' not in st.session_state:
             st.session_state.page = 'main.py'
         else:
-            'congest_Show.py'
+            'congest_show.py'
 
 
         #6. 혼잡도 자세히 보기 -> congest_show페이지로 이동
@@ -366,7 +364,7 @@ with tab1:
         st.pyplot(fig)
 
 
-
+print(st.session_state)
 
 with tab2:
     st.subheader("area 2")
