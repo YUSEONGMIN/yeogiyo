@@ -109,7 +109,7 @@ class SeoulData():
 # 1. 기본 설정
 # 한글폰트 설정
 #print(plt.rcParams['font.family'])
-plt.rcParams['font.family'] = "NanumGothic"
+plt.rcParams['font.family'] = "Malgun Gothic"
 plt.rcParams['axes.unicode_minus'] = False
 
 # 그래프 안의 한글폰트 설정
@@ -195,7 +195,7 @@ with tab1:
     # 팝업 기능
     @st.experimental_dialog("select your area")
     def select_area(value):
-        places=realtime_df[realtime_df['CATEGORY_ENG']==value]['ENG_NM'].values
+        places=seoulcity_df[seoulcity_df['CATEGORY_ENG']==value]['ENG_NM'].values
         area = st.radio("Select one location", places)
         if st.button("select"):
             st.session_state.select_area = {"value": value, "area": area}
@@ -223,8 +223,6 @@ with tab1:
     selected_date = st.date_input("When is your date", value="today")
     selected_time = st.time_input("Select your time", value="now", step=3600).hour
     st.write("Your appointment is: ", selected_date, selected_time)
-
-    print("st.session_state.select_area", st.session_state)
 
     # 5.3. 화면 default값 api 호출 설정/출력
     # 1) 화면 default값 api 호출, 메시지 & 바그래프 출력
@@ -314,69 +312,75 @@ with tab1:
                 naver_link = on_word_click(location=area_temp, keywords=keyword)
                 #st.text(naver_link)
                 col.link_button(keyword, naver_link)
-
-
+                
     else:
-        # 5.4 Predict table에서 혼잡도 가져와서 파이차트, 예상 혼잡도 출력
-        # 파이차트 임시 데이터 정의
-        labels = '10th', '20th', '30th', '40th', '50th', '60th', '70th'
-        st.session_state["selected_area"] = seoulcity_df[seoulcity_df["ENG_NM"]==selected_area]["AREA_NM"].values[0]
-        st.session_state["selected_date"] = selected_date
-        st.session_state["selected_time"] = selected_time
+        
+        if selected_area and selected_date:
+        
+            # 5.4 Predict table에서 혼잡도 가져와서 파이차트, 예상 혼잡도 출력
+            # 파이차트 임시 데이터 정의
+            labels = '10th', '20th', '30th', '40th', '50th', '60th', '70th'
+            st.session_state["selected_area"] = seoulcity_df[seoulcity_df["ENG_NM"]==selected_area]["AREA_NM"].values[0]
+            st.session_state["selected_date"] = selected_date
+            st.session_state["selected_time"] = selected_time
 
-        cond1 = predict_df["ENG_NM"]==selected_area
-        cond2 = predict_df["PPLTN_DATE"]==str(selected_date)
-        cond3 = predict_df["PPLTN_TIME"]==str(selected_time).zfill(2)
+            cond1 = predict_df["ENG_NM"]==selected_area
+            cond2 = predict_df["PPLTN_DATE"]==str(selected_date)
+            cond3 = predict_df["PPLTN_TIME"]==str(selected_time).zfill(2)
 
-        selected_df = predict_df[cond1 & cond2 & cond3] 
-        selected_df.drop_duplicates(inplace=True)
-        if select_area:
-            default_area = select_area
+            selected_df = predict_df[cond1 & cond2 & cond3] 
+            selected_df.drop_duplicates(inplace=True)
+            if select_area:
+                default_area = select_area
+                if len(selected_df) == 0:
+                    congest_result = "None"
+                else:
+                    congest_result = selected_df['PERCENTAGE'].iloc[0]
+                fig, ax = plt.subplots()
+                ax.text(0,0,congest_result, ha='center', va='center', fontsize=32)
+                
+            # print(selected_df)
             if len(selected_df) == 0:
-                congest_result = "None"
+                ratio = [1] * 7
             else:
-                congest_result = selected_df['PERCENTAGE'].iloc[0]
+                ratio = selected_df[selected_df.columns[selected_df.columns.str.contains("RATE_..")]].iloc[0]
+            colors = [
+                "#8675FF",
+                "#FD7289",
+                "#FF9A3E",
+                "#353E6C",
+                "#16DBCC",
+                "#DCFAF8",
+                "#FFBB38",
+            ]    
+            explode = (0, 0, 0, 0, 0, 0, 0)
+            wedgeprops = {'width': 0.7, 'edgecolor': 'w', 'linewidth': 5}
+
             fig, ax = plt.subplots()
-            ax.text(0,0,congest_result, ha='center', va='center', fontsize=32)
+            ax.pie(ratio, colors=colors, labels=labels, counterclock=False, wedgeprops=dict(width=0.6),
+                explode=explode, shadow=False, startangle=90, 
+                autopct='%.1f%%') #,  wedgeprops=wedgeprops,autopct=(labels, ratio), textprops=dict(color="w")
 
-    # print(selected_df)
-        if len(selected_df) == 0:
-            ratio = [1] * 7
-        else:
-            ratio = selected_df[selected_df.columns[selected_df.columns.str.contains("RATE_..")]].iloc[0]
-        colors = [
-            "#8675FF",
-            "#FD7289",
-            "#FF9A3E",
-            "#353E6C",
-            "#16DBCC",
-            "#DCFAF8",
-            "#FFBB38",
-        ]    
-        explode = (0, 0, 0, 0, 0, 0, 0)
-        wedgeprops = {'width': 0.7, 'edgecolor': 'w', 'linewidth': 5}
+            #가운데에 텍스트 추가
+            center_circle = plt.Circle((0, 0), 0.3, fc='white')
+            fig.gca().add_artist(center_circle)
+            ax.axis('equal') # 파이차트를 원형으로 유지
+            # ax.set_title("혼잡도 현황", fontproperties=prop)
+            st.pyplot(fig)
 
-        fig, ax = plt.subplots()
-        ax.pie(ratio, colors=colors, labels=labels, counterclock=False, wedgeprops=dict(width=0.6),
-            explode=explode, shadow=False, startangle=90, 
-            autopct='%.1f%%') #,  wedgeprops=wedgeprops,autopct=(labels, ratio), textprops=dict(color="w")
-        
-        #가운데에 텍스트 추가
-        center_circle = plt.Circle((0, 0), 0.3, fc='white')
-        fig.gca().add_artist(center_circle)
-        ax.axis('equal') # 파이차트를 원형으로 유지
-        # ax.set_title("혼잡도 현황", fontproperties=prop)
-        ax.text(0,0,congest_result, ha='center', va='center', fontsize=32)
-        st.pyplot(fig)
+            if len(selected_df["PREDICT"]) != 0:
+                st.write("congest value: ", selected_df["PREDICT"].values[0])
+            
+            re_cond1 = realtime_df["ENG_NM"]==selected_area
+            cond_time = str(selected_date) +" "+ str(selected_time).zfill(2)+":00"
+            re_cond2 = pd.to_datetime(realtime_df["PPLTN_TIME"]) >= cond_time
+            re_cond3 = pd.to_datetime(realtime_df["PPLTN_TIME"]) < pd.to_datetime(cond_time) + timedelta(hours=1)
 
-        st.write("congest value: ", selected_df["PREDICT"].values[0])
-        
-        re_cond1 = realtime_df["ENG_NM"]==selected_area
-        st.write(realtime_df[re_cond1])
-        st.write(pd.to_datetime("2024-06-14") > pd.to_datetime(selected_date))
-        # re_cond3 = realtime_df["PPLTN_TIME"]==str(selected_date selected_time).zfill(2)
-        # st.write(realtime_df.columns)
-        # "MALE_PPLTN_RATE FEMALE_PPLTN_RATE"
+            gender_df = realtime_df[re_cond1 & re_cond2 & re_cond3].loc[:,["MALE_PPLTN_RATE","FEMALE_PPLTN_RATE"]]
+            
+            gender_graph = gender_df.applymap(float).mean()
+            fig = plt.figure()
+            st.pyplot(gender_graph.plot.bar(rot=90).figure)
 
 
 
@@ -398,9 +402,6 @@ with tab1:
             if st.button("Click for congestion details"):
                 st.switch_page("pages/congest_show.py")
 
-
-
-print(st.session_state)
 
 
 

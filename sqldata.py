@@ -4,7 +4,7 @@ import streamlit as st
 
 def sql_realtime():
     conn = st.connection("final_project",type="sql") 
-    data = conn.query("select * from Seoulcity")
+    data = conn.query("select * from Realtime")
     return data  
 
 @st.cache_data
